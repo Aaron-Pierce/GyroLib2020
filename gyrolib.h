@@ -685,7 +685,7 @@ enum gyroStace duac(int speed, int port1, int port2, int target_value)
 
 
 //Drives with gyro a certain distance
-void drive_with_gyro_distance_advanced(int speed, int target_distance, int motor, double pk, int correction)
+enum gyroState drive_with_gyro_distance_advanced(int speed, int target_distance, int motor, double pk, int correction)
 {
   double target_theta = absolute_theta;
   int initial_distance = gmpc(motor);
@@ -710,21 +710,22 @@ void drive_with_gyro_distance_advanced(int speed, int target_distance, int motor
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
   mav(left_motor, 0);
+  return Successful;
 }
 //Abbreviated drive_with_gyro_distance_advanced()
-void dwgda(int speed, int target_distance, int motor, double pk, int correction)
+enum gyroState dwgda(int speed, int target_distance, int motor, double pk, int correction)
 {
-  drive_with_gyro_distance_advanced(speed, target_distance, motor, pk, correction);
+  return drive_with_gyro_distance_advanced(speed, target_distance, motor, pk, correction);
 }
 //Simplified drive_with_gyro_distance_advanced()
-void drive_with_gyro_distance(int speed, int target_distance, int motor)
+enum gyroState drive_with_gyro_distance(int speed, int target_distance, int motor)
 {
-  drive_with_gyro_distance_advanced(speed, target_distance, motor, 12, 0);
+  return drive_with_gyro_distance_advanced(speed, target_distance, motor, 12, 0);
 }
 //Abbreviated drive_with_gyro_distance()
-void dwgd(int speed, int target_distance, int motor)
+enum gyroState dwgd(int speed, int target_distance, int motor)
 {
-  drive_with_gyro_distance(speed, target_distance, motor);
+  return drive_with_gyro_distance(speed, target_distance, motor);
 }
 //CREATE EXCLUSIVE FUNCTIONS BELOW
 //Stops the create and calibrates. Exact same as calibrarte_gyro_advanced and should only be used if the create was previously moving and you are too lazy to stop it yourself
