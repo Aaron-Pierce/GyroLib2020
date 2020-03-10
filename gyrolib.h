@@ -11,20 +11,20 @@
 */
 #include <kipr/botball.h>
 #include <pthread.h>
-double bias;  //Variable to hold the calibration value
-double ninetyDegrees; //How many KIPR degrees are in a regular degrees.
-int right_motor, left_motor;  //ports
-double right_forward_coefficient = 1, left_forward_coefficient = 1; //Used exclusively for drive_with_gyro and create_drive_with_gyro
+double bias;                                                          //Variable to hold the calibration value
+double ninetyDegrees;                                                 //How many KIPR degrees are in a regular degrees.
+int right_motor, left_motor;                                          //ports
+double right_forward_coefficient = 1, left_forward_coefficient = 1;   //Used exclusively for drive_with_gyro and create_drive_with_gyro
 double right_backward_coefficient = 1, left_backward_coefficient = 1; //Because the motors drive differently when going backwards vs when going forwards
-int in_degrees = 0;  //Checks if the user is in regular degrees or KIPR degrees. 0 is KIPR degrees. Would be a boolean if C had those
-double absolute_theta = 0;  //The theta that thetaTracker updates to
-int mode = 0; //The mode with 0 being relative and 1 being absolute
-int timeout = 120000;  //Stops functions after a certain amount of time in milliseconds, defaults to 120 seconds so it does nothing
-char axis = 'z';  //The axis that the program reads from. Defaults to z
-thread thetaTracker;  //Thread to track the absolute theta
+int in_degrees = 0;                                                   //Checks if the user is in regular degrees or KIPR degrees. 0 is KIPR degrees. Would be a boolean if C had those
+double absolute_theta = 0;                                            //The theta that thetaTracker updates to
+int mode = 0;                                                         //The mode with 0 being relative and 1 being absolute
+int timeout = 120000;                                                 //Stops functions after a certain amount of time in milliseconds, defaults to 120 seconds so it does nothing
+char axis = 'z';                                                      //The axis that the program reads from. Defaults to z
+thread thetaTracker;                                                  //Thread to track the absolute theta
 
-
-enum gyroState { //Various return values of Gyro movement functions
+enum gyroState
+{ //Various return values of Gyro movement functions
   TimedOut,
   Successful,
   Collided,
@@ -54,34 +54,34 @@ void declare_motors_and_degrees(int lmotor, int rmotor, double degree)
 //should mainly be used as a private function to get gyro readings from your axis of choice
 int get_gyro_reading()
 {
-  if(axis == 'z')
-      return gyro_z();
-  else if(axis == 'x')
-      return gyro_x();
-  else if(axis == 'y')
-      return gyro_y();
+  if (axis == 'z')
+    return gyro_z();
+  else if (axis == 'x')
+    return gyro_x();
+  else if (axis == 'y')
+    return gyro_y();
   else
   {
-      printf("ERROR: The gyro axis must either be x, y, or z\n");
-      exit(2);
+    printf("ERROR: The gyro axis must either be x, y, or z\n");
+    exit(2);
   }
 }
 //Filters the gyro reading for potentially more accuracy. Accepts a number that corresponds to different filters
 int get_filtered_gyro_reading(int filter)
 {
-  switch(filter)
+  switch (filter)
   {
-          //Filter 0 is no filter
-      case 0:
-          return get_gyro_reading();
-          break;
-          //Filter 1 is a floor filter. It floors each number to the nearest 10
-      case 1:
-          return (int)(get_gyro_reading() * 10) / 10;
-          break;
-          //Default is no filter
-      default:
-          return get_gyro_reading();
+    //Filter 0 is no filter
+  case 0:
+    return get_gyro_reading();
+    break;
+    //Filter 1 is a floor filter. It floors each number to the nearest 10
+  case 1:
+    return (int)(get_gyro_reading() * 10) / 10;
+    break;
+    //Default is no filter
+  default:
+    return get_gyro_reading();
   }
 }
 //call this function to determine how many KIPR degrees are in a regular degree. Sets the unit from KIPR degrees to normal degrees.
@@ -90,16 +90,17 @@ void calibrate_degrees()
 {
   double theta = 0;
   printf("Put the robot flat on the table, make sure it is at a complete stop, and press the right button\n");
-  while(right_button() == 0);
+  while (right_button() == 0)
+    ;
   printf("Now turn the robot 360degrees while keeping it flat and then press the left button\n");
   double t0 = seconds();
-  while(left_button() == 0)
+  while (left_button() == 0)
   {
-      theta += (get_gyro_reading() - bias) * (seconds() - t0);
-      t0 = seconds();
+    theta += (get_gyro_reading() - bias) * (seconds() - t0);
+    t0 = seconds();
   }
   ninetyDegrees = abs(theta / 4.0);
-  printf("90 degrees is %f KIPR degrees\n",ninetyDegrees);
+  printf("90 degrees is %f KIPR degrees\n", ninetyDegrees);
   in_degrees = 1;
 }
 //Calibrates the bias. Stops the robot for sleep_time. Make sleep_time just large enough so that it at a COMPLETE stop before finding the bias.
@@ -113,15 +114,15 @@ void calibrate_gyro_advanced(int sleep_time, int sample_size)
   double t0 = seconds();
   double sum = 0;
   int i = 0;
-  while(i < sample_size)
+  while (i < sample_size)
   {
-      sum += get_gyro_reading() * (seconds() - t0);
-      t0 = seconds();
-      i++;
+    sum += get_gyro_reading() * (seconds() - t0);
+    t0 = seconds();
+    i++;
   }
   //Divide how much the gyroscope has drifted by time to get the drift per second
   bias = (sum / (seconds() - initial_time));
-  printf("New Bias: %f\n", bias);//prints out your bias. COMMENT THIS LINE OUT IF YOU DON'T WANT BIAS READINGS PRINTED OUT
+  printf("New Bias: %f\n", bias); //prints out your bias. COMMENT THIS LINE OUT IF YOU DON'T WANT BIAS READINGS PRINTED OUT
 }
 //Abbreviated calibrate_gyro_advanced()
 void cga(int sleep_time, int sample_size)
@@ -142,10 +143,10 @@ void cg()
 void update_theta()
 {
   double t0 = seconds();
-  while(1)
+  while (1)
   {
-      absolute_theta += (get_gyro_reading() - bias) * (seconds() - t0);
-      t0 = seconds();
+    absolute_theta += (get_gyro_reading() - bias) * (seconds() - t0);
+    t0 = seconds();
   }
 }
 //Begins the thread to track theta
@@ -175,32 +176,32 @@ void ig(int lmotor, int rmotor, int degree)
 //returns the theta that the theta tracker is getting
 char get_axis()
 {
-return axis;
+  return axis;
 }
 //must be called to set the axis from z to x or y
 void set_axis(char a)
 {
-  if(a == 'x' || a == 'y' || a == 'z')
-      axis = a;
+  if (a == 'x' || a == 'y' || a == 'z')
+    axis = a;
   else
   {
-      printf("ERROR: The gyro axis must either be x, y, or z\n");
-      exit(2);
+    printf("ERROR: The gyro axis must either be x, y, or z\n");
+    exit(2);
   }
 }
 double get_absolute_theta()
 {
-  if(in_degrees)
-      return absolute_theta / (ninetyDegrees / 90);
+  if (in_degrees)
+    return absolute_theta / (ninetyDegrees / 90);
   return absolute_theta;
 }
 void set_absolute_theta(double value)
 {
-  if(in_degrees)
-      absolute_theta = value * (ninetyDegrees / 90);
+  if (in_degrees)
+    absolute_theta = value * (ninetyDegrees / 90);
   else
   {
-      absolute_theta = value;
+    absolute_theta = value;
   }
 }
 int get_mode()
@@ -209,9 +210,9 @@ int get_mode()
 }
 void set_mode(int value)
 {
-  if(value == 0 || value == 1)
+  if (value == 0 || value == 1)
   {
-      mode = value;
+    mode = value;
   }
 }
 int get_timeout()
@@ -280,47 +281,47 @@ enum gyroState arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double
   //Set up the start time to break if function goes too long
   double start_time = seconds();
   //Changes between kipr degrees and degrees
-  if(in_degrees)
+  if (in_degrees)
   {
-      target_theta *= (ninetyDegrees / 90);
+    target_theta *= (ninetyDegrees / 90);
   }
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
   //Sets the motor speeds
   mav(right_motor, right_wheel_speed);
   mav(left_motor, left_wheel_speed);
-  if(target_theta > absolute_theta)//positive turns left
+  if (target_theta > absolute_theta) //positive turns left
   {
-      //Keeps the motors going until it reaches the desired angle
-      while(target_theta > absolute_theta)
+    //Keeps the motors going until it reaches the desired angle
+    while (target_theta > absolute_theta)
+    {
+      //Stop the function if the overshoot time is exceeded
+      if ((seconds() - start_time) * 1000 > timeout)
       {
-          //Stop the function if the overshoot time is exceeded
-          if((seconds() - start_time) * 1000 > timeout)
-          {
-              printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-              mav(right_motor, 0);
-              mav(left_motor, 0);
-              return TimedOut;
-          }
+        printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
+        mav(right_motor, 0);
+        mav(left_motor, 0);
+        return TimedOut;
       }
+    }
   }
   else
   {
-      //Keeps the motors going until it reaches the desired angle
-      while(target_theta < absolute_theta)
+    //Keeps the motors going until it reaches the desired angle
+    while (target_theta < absolute_theta)
+    {
+      //Stop the function if the overshoot time is exceeded
+      if ((seconds() - start_time) * 1000 > timeout)
       {
-          //Stop the function if the overshoot time is exceeded
-          if((seconds() - start_time) * 1000 > timeout)
-          {
-              printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-              mav(right_motor, 0);
-              mav(left_motor, 0);
-              return TimedOut;
-          }
+        printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
+        mav(right_motor, 0);
+        mav(left_motor, 0);
+        return TimedOut;
       }
+    }
   }
   //Stops the motors at the end of the turn
   mav(right_motor, 0);
@@ -341,50 +342,50 @@ enum gyroState turn_with_gyro_overshoot(double correctionConstant, double target
   //Set up the start time to break if function goes too long
   double start_time = seconds();
   //Converts to kipr degrees
-  if(in_degrees)
+  if (in_degrees)
   {
-      target_theta *= (ninetyDegrees / 90);
+    target_theta *= (ninetyDegrees / 90);
   }
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
   //Converts from milliseconds to seconds
   overshoot /= 1000;
   //Boolean checks if it has overshot yet
   int overshot = 0;
   double overshotTime = 0;
-  while(seconds() < overshotTime + overshoot || overshot == 0)
+  while (seconds() < overshotTime + overshoot || overshot == 0)
   {
-      if(target_theta >= absolute_theta)
+    if (target_theta >= absolute_theta)
+    {
+      mav(left_motor, -(target_theta - absolute_theta) * correctionConstant);
+      mav(right_motor, (target_theta - absolute_theta) * correctionConstant);
+      if (absolute_theta >= target_theta && !overshot)
       {
-          mav(left_motor, -(target_theta - absolute_theta) * correctionConstant);
-          mav(right_motor,(target_theta - absolute_theta) * correctionConstant);
-          if(absolute_theta >= target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
+        overshot = 1;
+        overshotTime = seconds();
       }
-      else
+    }
+    else
+    {
+      mav(left_motor, (absolute_theta - target_theta) * correctionConstant);
+      mav(right_motor, -(absolute_theta - target_theta) * correctionConstant);
+      if (absolute_theta < target_theta && !overshot)
       {
-          mav(left_motor, (absolute_theta - target_theta) * correctionConstant);
-          mav(right_motor, -(absolute_theta - target_theta) * correctionConstant);
-          if(absolute_theta < target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
+        overshot = 1;
+        overshotTime = seconds();
       }
-      //Stop the function if the overshoot time is exceeded
-      if((seconds() - start_time) * 1000 > timeout)
-      {
-          printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-          mav(left_motor, 0);
-          mav(right_motor, 0);
-          return TimedOut;
-      }
+    }
+    //Stop the function if the overshoot time is exceeded
+    if ((seconds() - start_time) * 1000 > timeout)
+    {
+      printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
+      mav(left_motor, 0);
+      mav(right_motor, 0);
+      return TimedOut;
+    }
   }
   //Stops the motors at the end of the turn
   mav(left_motor, 0);
@@ -400,14 +401,14 @@ enum gyroState twgo(double correctionConstant, double targetTheta, double oversh
 enum gyroState turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
   //Converts to kipr degrees
-  if(in_degrees)
+  if (in_degrees)
   {
-      target_theta *= (ninetyDegrees / 90);
+    target_theta *= (ninetyDegrees / 90);
   }
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
   double start_time = seconds();
   double t0 = seconds();
@@ -416,36 +417,36 @@ enum gyroState turn_with_gyro_advanced(double target_theta, double speed_limit, 
   int previous_error = error;
   int max_speed = speed_limit;
   //Keep turning until the error reaches 0
-  while(abs(error) > 0)
+  while (abs(error) > 0)
   {
-      //Update the P, I, and D Values
-      p = error;
-      i += error * (seconds() - t0);
-      d = (error - previous_error) / (seconds() - t0);
-      t0 = seconds();
-      pid = p*pk + i*ik + d*dk;
-      //Cap the pid value to the motor limitations
-      if(pid > max_speed)
-      {
-          pid = max_speed;
-      }
-      if(pid < -max_speed)
-      {
-          pid = -max_speed;
-      }
-      //Move the robot
-      mav(right_motor, pid);
-      mav(left_motor, -pid);
-      //Update theta and error
-      error = target_theta - absolute_theta;
-      //Break out of the loop if timeout is exceeded
-      if((seconds() - start_time) * 1000 > timeout)
-      {
-          printf("Function Timed Out. Error: %f\n", error);
-          mav(left_motor, 0);
-          mav(right_motor, 0);
-          return TimedOut;
-      }
+    //Update the P, I, and D Values
+    p = error;
+    i += error * (seconds() - t0);
+    d = (error - previous_error) / (seconds() - t0);
+    t0 = seconds();
+    pid = p * pk + i * ik + d * dk;
+    //Cap the pid value to the motor limitations
+    if (pid > max_speed)
+    {
+      pid = max_speed;
+    }
+    if (pid < -max_speed)
+    {
+      pid = -max_speed;
+    }
+    //Move the robot
+    mav(right_motor, pid);
+    mav(left_motor, -pid);
+    //Update theta and error
+    error = target_theta - absolute_theta;
+    //Break out of the loop if timeout is exceeded
+    if ((seconds() - start_time) * 1000 > timeout)
+    {
+      printf("Function Timed Out. Error: %f\n", error);
+      mav(left_motor, 0);
+      mav(right_motor, 0);
+      return TimedOut;
+    }
   }
   //Stops the motors at the end of the turn
   mav(left_motor, 0);
@@ -476,21 +477,21 @@ enum gyroState drive_with_gyro_advanced(int speed, int time, double pk, int corr
   double target_theta = absolute_theta;
   double start_time = seconds();
   double error = absolute_theta - target_theta;
-  while(seconds() - start_time < (time / 1000.0))
+  while (seconds() - start_time < (time / 1000.0))
   {
-      mav(right_motor, speed - (pk * error));
-      mav(left_motor, speed + (pk * error));
-      error = absolute_theta - target_theta;
+    mav(right_motor, speed - (pk * error));
+    mav(left_motor, speed + (pk * error));
+    error = absolute_theta - target_theta;
   }
   //Turn at the end to be certain that it ends at the same angle it started at if correction does not equal 0
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
-  if(correction != 0)
+  if (correction != 0)
   {
-      turn_with_gyro(target_theta);
+    turn_with_gyro(target_theta);
   }
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
@@ -513,7 +514,7 @@ enum gyroState dwg(int speed, int time)
   drive_with_gyro(speed, time);
 }
 //Drives until an analog input
-int drive_until_analog_advanced(int speed, int port, int target_value, double pk, double max_time)
+enum gyroState drive_until_analog_advanced(int speed, int port, int target_value, double pk, double max_time)
 {
   //Set up the initial variables
   double start_time = seconds();
@@ -522,61 +523,59 @@ int drive_until_analog_advanced(int speed, int port, int target_value, double pk
   //Check the initial value
   int initial_value = analog(port);
   //Drive until the value goes above the target value if it started below the target value
-  if(initial_value < target_value)
+  if (initial_value < target_value)
   {
-      while(analog(port) < target_value)
+    while (analog(port) < target_value)
+    {
+      mav(right_motor, speed - (pk * error));
+      mav(left_motor, speed + (pk * error));
+      error = absolute_theta - target_theta;
+      //Break out of the loop if timeout is exceeded
+      if ((seconds() - start_time) * 1000 > max_time)
       {
-          mav(right_motor, speed - (pk * error));
-          mav(left_motor, speed + (pk * error));
-          error = absolute_theta - target_theta;
-          //Break out of the loop if timeout is exceeded
-          if((seconds() - start_time) * 1000 > max_time)
-          {
-              printf("Function Timed Out. Error: %f\n", error);
-              mav(left_motor, 0);
-              mav(right_motor, 0);
-              return 0;
-          }
+        printf("Function Timed Out. Error: %f\n", error);
+        mav(left_motor, 0);
+        mav(right_motor, 0);
+        return TimedOut;
       }
+    }
   }
   //Drive until the sensor value goes below the target value if it started above the target value
   else
   {
-      while(analog(port) > target_value)
+    while (analog(port) > target_value)
+    {
+      mav(right_motor, speed - (pk * error));
+      mav(left_motor, speed + (pk * error));
+      error = absolute_theta - target_theta;
+      //Break out of the loop if timeout is exceeded
+      if ((seconds() - start_time) * 1000 > max_time)
       {
-          mav(right_motor, speed - (pk * error));
-          mav(left_motor, speed + (pk * error));
-          error = absolute_theta - target_theta;
-          //Break out of the loop if timeout is exceeded
-          if((seconds() - start_time) * 1000 > max_time)
-          {
-              printf("Function Timed Out. Error: %f\n", error);
-              mav(left_motor, 0);
-              mav(right_motor, 0);
-              return 0;
-              break;
-          }
+        printf("Function Timed Out. Error: %f\n", error);
+        mav(left_motor, 0);
+        mav(right_motor, 0);
+        return TimedOut;
       }
+    }
   }
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
   mav(left_motor, 0);
-    return 1;
+  return Successful;
 }
 //Abreviated drive_until_analog_advanced()
-int duaa(int speed, int port, int target_value, double pk, double max_time)
+enum gyroState duaa(int speed, int port, int target_value, double pk, double max_time)
 {
   return drive_until_analog_advanced(speed, port, target_value, pk, max_time);
 }
 
-
 //Simplified drive_until_analog_advanced()
-int drive_until_analog(int speed, int port, int target_value)
+enum gyroState drive_until_analog(int speed, int port, int target_value)
 {
   return drive_until_analog_advanced(speed, port, target_value, 12, 120000);
 }
 //Abbreviated drive_until_analog()
-int dua(int speed, int port, int target_value)
+enum gyroState dua(int speed, int port, int target_value)
 {
   return drive_until_analog(speed, port, target_value);
 }
@@ -590,19 +589,19 @@ void drive_until_digital_advanced(int speed, int port, double pk, double max_tim
   //Check the initial value
   int initial_value = digital(port);
   //Drive until the value in the digital sensor changes
-  while(digital(port) == initial_value)
+  while (digital(port) == initial_value)
   {
-      mav(right_motor, speed - (pk * error));
-      mav(left_motor, speed + (pk * error));
-      error = absolute_theta - target_theta;
-      //Break out of the loop if timeout is exceeded
-      if((seconds() - start_time) * 1000 > max_time)
-      {
-          printf("Function Timed Out. Error: %f\n", error);
-          mav(left_motor, 0);
-          mav(right_motor, 0);
-          break;
-      }
+    mav(right_motor, speed - (pk * error));
+    mav(left_motor, speed + (pk * error));
+    error = absolute_theta - target_theta;
+    //Break out of the loop if timeout is exceeded
+    if ((seconds() - start_time) * 1000 > max_time)
+    {
+      printf("Function Timed Out. Error: %f\n", error);
+      mav(left_motor, 0);
+      mav(right_motor, 0);
+      break;
+    }
   }
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
@@ -618,42 +617,42 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
   //Check the initial value
   int initial_value = analog(port1) + analog(port2);
   //Drive until the value goes above the target value if it started below the target value
-  if(initial_value < target_value)
+  if (initial_value < target_value)
   {
-      while(analog(port1) + analog(port2) < target_value)
+    while (analog(port1) + analog(port2) < target_value)
+    {
+      mav(right_motor, speed - (pk * error));
+      mav(left_motor, speed + (pk * error));
+      error = absolute_theta - target_theta;
+      //Break out of the loop if timeout is exceeded
+      if ((seconds() - start_time) * 1000 > max_time)
       {
-          mav(right_motor, speed - (pk * error));
-          mav(left_motor, speed + (pk * error));
-          error = absolute_theta - target_theta;
-          //Break out of the loop if timeout is exceeded
-          if((seconds() - start_time) * 1000 > max_time)
-          {
-              printf("Function Timed Out. Error: %f\n", error);
-              mav(left_motor, 0);
-              mav(right_motor, 0);
-              return 0;
-              break;
-          }
+        printf("Function Timed Out. Error: %f\n", error);
+        mav(left_motor, 0);
+        mav(right_motor, 0);
+        return 0;
+        break;
       }
+    }
   }
   //Drive until the sensor value goes below the target value if it started above the target value
   else
   {
-      while(analog(port1) + analog(port2) > target_value)
+    while (analog(port1) + analog(port2) > target_value)
+    {
+      mav(right_motor, speed - (pk * error));
+      mav(left_motor, speed + (pk * error));
+      error = absolute_theta - target_theta;
+      //Break out of the loop if timeout is exceeded
+      if ((seconds() - start_time) * 1000 > max_time)
       {
-          mav(right_motor, speed - (pk * error));
-          mav(left_motor, speed + (pk * error));
-          error = absolute_theta - target_theta;
-          //Break out of the loop if timeout is exceeded
-          if((seconds() - start_time) * 1000 > max_time)
-          {
-              printf("Function Timed Out. Error: %f\n", error);
-              mav(left_motor, 0);
-              mav(right_motor, 0);
-              return 0;
-              break;
-          }
+        printf("Function Timed Out. Error: %f\n", error);
+        mav(left_motor, 0);
+        mav(right_motor, 0);
+        return 0;
+        break;
       }
+    }
   }
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
@@ -661,11 +660,10 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
   return 1;
 }
 
-int duac(int speed, int port1, int port2, int target_value){
-    return drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
+int duac(int speed, int port1, int port2, int target_value)
+{
+  return drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
 }
-
-
 
 //Abbreviated drive_until_digital_advanced()
 void duda(int speed, int port, double pk, double max_time)
@@ -689,21 +687,21 @@ void drive_with_gyro_distance_advanced(int speed, int target_distance, int motor
   int initial_distance = gmpc(motor);
   double error = absolute_theta - target_theta;
   //Drive until the desired distance is reached
-  while(abs(gmpc(motor) - initial_distance) < target_distance)
+  while (abs(gmpc(motor) - initial_distance) < target_distance)
   {
-      mav(right_motor, speed - (pk * error));
-      mav(left_motor, speed + (pk * error));
-      error = absolute_theta - target_theta;
+    mav(right_motor, speed - (pk * error));
+    mav(left_motor, speed + (pk * error));
+    error = absolute_theta - target_theta;
   }
   //Turn at the end to be certain that it ends at the same angle it started at if correction does not equal 0
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
-  if(correction != 0)
+  if (correction != 0)
   {
-      turn_with_gyro(target_theta);
+    turn_with_gyro(target_theta);
   }
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
@@ -735,15 +733,15 @@ void create_calibrate_gyro_advanced(int sleep_time, int sample_size)
   double t0 = seconds();
   double sum = 0;
   int i = 0;
-  while(i < sample_size)
+  while (i < sample_size)
   {
-      sum += get_gyro_reading() * (seconds() - t0);
-      t0 = seconds();
-      i++;
+    sum += get_gyro_reading() * (seconds() - t0);
+    t0 = seconds();
+    i++;
   }
   //Divide how much the gyroscope has drifted by time to get the drift per second
   bias = (sum / (seconds() - initial_time));
-  printf("New Bias: %f\n", bias);//prints out your bias. COMMENT THIS LINE OUT IF YOU DON'T WANT BIAS READINGS PRINTED OUT
+  printf("New Bias: %f\n", bias); //prints out your bias. COMMENT THIS LINE OUT IF YOU DON'T WANT BIAS READINGS PRINTED OUT
 }
 //Abbreviated create_calibrate_gyro_advanced()
 void ccga(int sleep_time, int sample_size)
@@ -766,44 +764,44 @@ void create_arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double ta
   //Set up the start time to break if function goes too long
   double start_time = seconds();
   //Changes between kipr degrees and degrees
-  if(in_degrees)
+  if (in_degrees)
   {
-      target_theta *= (ninetyDegrees / 90);
+    target_theta *= (ninetyDegrees / 90);
   }
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
   //Sets the motor speeds
   create_drive_direct(right_wheel_speed, left_wheel_speed);
-  if(target_theta > absolute_theta)//positive turns left
+  if (target_theta > absolute_theta) //positive turns left
   {
-      //Keeps the motors going until it reaches the desired angle
-      while(target_theta > absolute_theta)
+    //Keeps the motors going until it reaches the desired angle
+    while (target_theta > absolute_theta)
+    {
+      //Stop the function if the overshoot time is exceeded
+      if ((seconds() - start_time) * 1000 > timeout)
       {
-          //Stop the function if the overshoot time is exceeded
-          if((seconds() - start_time) * 1000 > timeout)
-          {
-              printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-              create_stop();
-              break;
-          }
+        printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
+        create_stop();
+        break;
       }
+    }
   }
   else
   {
-      //Keeps the motors going until it reaches the desired angle
-      while(target_theta < absolute_theta)
+    //Keeps the motors going until it reaches the desired angle
+    while (target_theta < absolute_theta)
+    {
+      //Stop the function if the overshoot time is exceeded
+      if ((seconds() - start_time) * 1000 > timeout)
       {
-          //Stop the function if the overshoot time is exceeded
-          if((seconds() - start_time) * 1000 > timeout)
-          {
-              printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-              create_stop();
-              break;
-          }
+        printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
+        create_stop();
+        break;
       }
+    }
   }
   //Stops the create at the end of the turn
   create_stop();
@@ -822,47 +820,47 @@ void create_turn_with_gyro_overshoot(double correctionConstant, double target_th
   //Set up the start time to break if function goes too long
   double start_time = seconds();
   //Converts to kipr degrees
-  if(in_degrees)
+  if (in_degrees)
   {
-      target_theta *= (ninetyDegrees / 90);
+    target_theta *= (ninetyDegrees / 90);
   }
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
   //Converts from milliseconds to seconds
   overshoot /= 1000;
   //Boolean checks if it has overshot yet
   int overshot = 0;
   double overshotTime = 0;
-  while(seconds() < overshotTime + overshoot || overshot == 0)
+  while (seconds() < overshotTime + overshoot || overshot == 0)
   {
-      if(target_theta >= absolute_theta)
+    if (target_theta >= absolute_theta)
+    {
+      create_drive_direct(-(target_theta - absolute_theta) * correctionConstant, (target_theta - absolute_theta) * correctionConstant);
+      if (absolute_theta >= target_theta && !overshot)
       {
-          create_drive_direct(-(target_theta - absolute_theta) * correctionConstant, (target_theta - absolute_theta) * correctionConstant);
-          if(absolute_theta >= target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
+        overshot = 1;
+        overshotTime = seconds();
       }
-      else
+    }
+    else
+    {
+      create_drive_direct((absolute_theta - target_theta) * correctionConstant, -(absolute_theta - target_theta) * correctionConstant);
+      if (absolute_theta < target_theta && !overshot)
       {
-          create_drive_direct((absolute_theta - target_theta) * correctionConstant, -(absolute_theta - target_theta) * correctionConstant);
-          if(absolute_theta < target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
+        overshot = 1;
+        overshotTime = seconds();
       }
-      //Stop the function if the overshoot time is exceeded
-      if((seconds() - start_time) * 1000 > timeout)
-      {
-          printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-          create_stop();
-          break;
-      }
+    }
+    //Stop the function if the overshoot time is exceeded
+    if ((seconds() - start_time) * 1000 > timeout)
+    {
+      printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
+      create_stop();
+      break;
+    }
   }
   //Stops the motors at the end of the turn
   create_stop();
@@ -876,14 +874,14 @@ void ctwgo(double correctionConstant, double targetTheta, double overshoot)
 void create_turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
   //Converts to kipr degrees
-  if(in_degrees)
+  if (in_degrees)
   {
-      target_theta *= (ninetyDegrees / 90);
+    target_theta *= (ninetyDegrees / 90);
   }
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
   double start_time = seconds();
   double t0 = seconds();
@@ -892,34 +890,34 @@ void create_turn_with_gyro_advanced(double target_theta, double speed_limit, dou
   int previous_error = error;
   int max_speed = speed_limit;
   //Keep turning until the error reaches 0
-  while(abs(error) > 0)
+  while (abs(error) > 0)
   {
-      //Update the P, I, and D Values
-      p = error;
-      i += error * (seconds() - t0);
-      d = (error - previous_error) / (seconds() - t0);
-      t0 = seconds();
-      pid = p*pk + i*ik + d*dk;
-      //Cap the pid value to the motor limitations
-      if(pid > max_speed)
-      {
-          pid = max_speed;
-      }
-      if(pid < -max_speed)
-      {
-          pid = -max_speed;
-      }
-      //Move the robot
-      create_drive_direct(-pid, pid);
-      //Update theta and error
-      error = target_theta - absolute_theta;
-      //Break out of the loop if timeout is exceeded
-      if((seconds() - start_time) * 1000 > timeout)
-      {
-          printf("Function Timed Out. Error: %f\n", error);
-          create_stop();
-          break;
-      }
+    //Update the P, I, and D Values
+    p = error;
+    i += error * (seconds() - t0);
+    d = (error - previous_error) / (seconds() - t0);
+    t0 = seconds();
+    pid = p * pk + i * ik + d * dk;
+    //Cap the pid value to the motor limitations
+    if (pid > max_speed)
+    {
+      pid = max_speed;
+    }
+    if (pid < -max_speed)
+    {
+      pid = -max_speed;
+    }
+    //Move the robot
+    create_drive_direct(-pid, pid);
+    //Update theta and error
+    error = target_theta - absolute_theta;
+    //Break out of the loop if timeout is exceeded
+    if ((seconds() - start_time) * 1000 > timeout)
+    {
+      printf("Function Timed Out. Error: %f\n", error);
+      create_stop();
+      break;
+    }
   }
   //Stops the motors at the end of the turn
   create_stop();
@@ -945,20 +943,20 @@ void create_drive_with_gyro_advanced(int speed, int time, double pk, int correct
   double target_theta = absolute_theta;
   double start_time = seconds();
   double error = absolute_theta - target_theta;
-  while(seconds() - start_time < (time / 1000.0))
+  while (seconds() - start_time < (time / 1000.0))
   {
-      create_drive_direct(speed + (pk * error), speed - (pk * error));
-      error = absolute_theta - target_theta;
+    create_drive_direct(speed + (pk * error), speed - (pk * error));
+    error = absolute_theta - target_theta;
   }
   //Turn at the end to be certain that it ends at the same angle it started at if correction does not equal 0
   //Change between absolute and relative theta
-  if(mode == 0)
+  if (mode == 0)
   {
-      target_theta += absolute_theta;
+    target_theta += absolute_theta;
   }
-  if(correction != 0)
+  if (correction != 0)
   {
-      turn_with_gyro(target_theta);
+    turn_with_gyro(target_theta);
   }
   //Stop the motors at the end of the drive
   create_stop();
@@ -978,7 +976,3 @@ void cdwg(int speed, int time)
 {
   create_drive_with_gyro(speed, time);
 }
- 
- 
-
-
