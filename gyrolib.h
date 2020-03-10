@@ -336,7 +336,7 @@ enum gyroState awg(int lspeed, int rspeed, double target_theta)
 //turns but if it is too high the the robot will jump around and destroy motors but if it is too low then the robot will never reach its target.
 //overshoot is how long in ms you want the robot to continue to turn after it reaches its target to account for overshooting the target.
 //targetTheta needs to be positive for left turns and negative for right turns.
-void turn_with_gyro_overshoot(double correctionConstant, double target_theta, double overshoot)
+enum gyroState turn_with_gyro_overshoot(double correctionConstant, double target_theta, double overshoot)
 {
   //Set up the start time to break if function goes too long
   double start_time = seconds();
@@ -383,17 +383,18 @@ void turn_with_gyro_overshoot(double correctionConstant, double target_theta, do
           printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
           mav(left_motor, 0);
           mav(right_motor, 0);
-          break;
+          return TimedOut;
       }
   }
   //Stops the motors at the end of the turn
   mav(left_motor, 0);
   mav(right_motor, 0);
+  return Successful;
 }
 //Abbreviated turn_with_gyro_overshoot()
-void twgo(double correctionConstant, double targetTheta, double overshoot)
+enum gyroState twgo(double correctionConstant, double targetTheta, double overshoot)
 {
-  turn_with_gyro_overshoot(correctionConstant, targetTheta, overshoot);
+  return turn_with_gyro_overshoot(correctionConstant, targetTheta, overshoot);
 }
 //Turns to a angle using PID controls
 void turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
