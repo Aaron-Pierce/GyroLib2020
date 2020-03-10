@@ -676,7 +676,7 @@ enum gyroState drive_until_analog_advanced_compound(int speed, int port1, int po
   return Successful;
 }
 
-enum gyroStace duac(int speed, int port1, int port2, int target_value)
+enum gyroState duac(int speed, int port1, int port2, int target_value)
 {
   return drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
 }
