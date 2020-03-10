@@ -666,7 +666,7 @@ enum gyroState drive_until_analog_advanced_compound(int speed, int port1, int po
         printf("Function Timed Out. Error: %f\n", error);
         mav(left_motor, 0);
         mav(right_motor, 0);
-        return timedOut;
+        return TimedOut;
       }
     }
   }
