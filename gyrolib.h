@@ -626,7 +626,7 @@ enum gyroState dud(int speed, int port)
 }
 
 
-int drive_until_analog_advanced_compound(int speed, int port1, int port2, int target_value, double pk, double max_time)
+enum gyroState drive_until_analog_advanced_compound(int speed, int port1, int port2, int target_value, double pk, double max_time)
 {
   //Set up the initial variables
   double start_time = seconds();
@@ -648,7 +648,7 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
         printf("Function Timed Out. Error: %f\n", error);
         mav(left_motor, 0);
         mav(right_motor, 0);
-        return 0;
+        return TimedOut;
         break;
       }
     }
@@ -667,7 +667,7 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
         printf("Function Timed Out. Error: %f\n", error);
         mav(left_motor, 0);
         mav(right_motor, 0);
-        return 0;
+        return timedOut;
         break;
       }
     }
@@ -675,10 +675,10 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
   mav(left_motor, 0);
-  return 1;
+  return Successful;
 }
 
-int duac(int speed, int port1, int port2, int target_value)
+enum gyroStace duac(int speed, int port1, int port2, int target_value)
 {
   return drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
 }
