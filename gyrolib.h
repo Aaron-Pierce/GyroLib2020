@@ -275,7 +275,7 @@ void set_left_coefficient(double lc)
 }
 //turns the robot to reach a desired theta. Make sure that your robot is turing in the correct direction or it will never stop. If you are expecting this function to work consistantly then don't take your turns too fast.
 //This is considerably worse than the new turn_with_gyro for pivot turns but is more consistent from robot to robot and allows the robot to arc.
-void arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_theta)
+enum gyroState arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_theta)
 {
   //Set up the start time to break if function goes too long
   double start_time = seconds();
@@ -303,7 +303,7 @@ void arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_th
               printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
               mav(right_motor, 0);
               mav(left_motor, 0);
-              break;
+              return TimedOut;
           }
       }
   }
@@ -318,18 +318,19 @@ void arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_th
               printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
               mav(right_motor, 0);
               mav(left_motor, 0);
-              break;
+              return TimedOut;
           }
       }
   }
   //Stops the motors at the end of the turn
   mav(right_motor, 0);
   mav(left_motor, 0);
+  return Successful;
 }
 //Abbreviated arc_with_gyro()
-void awg(int lspeed, int rspeed, double target_theta)
+enum gyroState awg(int lspeed, int rspeed, double target_theta)
 {
-  arc_with_gyro(lspeed, rspeed, target_theta);
+  return arc_with_gyro(lspeed, rspeed, target_theta);
 }
 //The correction constant is a positive number (usually ~.01) that has to be adjusted based on the robot and turn. The higher it is the faster the robot
 //turns but if it is too high the the robot will jump around and destroy motors but if it is too low then the robot will never reach its target.
