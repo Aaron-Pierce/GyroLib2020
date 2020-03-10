@@ -506,12 +506,12 @@ enum gyroState dwga(int speed, int time, double pk, double correction_speed)
 //Simplified drive_with_gyro_advanced()
 enum gyroState drive_with_gyro(int speed, int time)
 {
-  drive_with_gyro_advanced(speed, time, 12, 0);
+  return drive_with_gyro_advanced(speed, time, 12, 0);
 }
 //Abbreviated drive_with_gyro()
 enum gyroState dwg(int speed, int time)
 {
-  drive_with_gyro(speed, time);
+  return drive_with_gyro(speed, time);
 }
 //Drives until an analog input
 enum gyroState drive_until_analog_advanced(int speed, int port, int target_value, double pk, double max_time)
