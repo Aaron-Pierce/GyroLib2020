@@ -471,7 +471,7 @@ enum gyroState twg(double target_theta)
 //Time is in ms.
 //Correction speed is the speed that the robot corrects itself at the end. The robot will not correct at the end if the speed is <= 0
 //If correction speed is between 0 and 1 then will run turn_with_gyro instead of arc_with_gyro to correct
-void drive_with_gyro_advanced(int speed, int time, double pk, int correction)
+enum gyroState drive_with_gyro_advanced(int speed, int time, double pk, int correction)
 {
   double target_theta = absolute_theta;
   double start_time = seconds();
@@ -495,19 +495,20 @@ void drive_with_gyro_advanced(int speed, int time, double pk, int correction)
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
   mav(left_motor, 0);
+  return Successful;
 }
 //Abbreviated drive_with_gyro_advanced()
-void dwga(int speed, int time, double pk, double correction_speed)
+enum gyroState dwga(int speed, int time, double pk, double correction_speed)
 {
-  drive_with_gyro_advanced(speed, time, pk, correction_speed);
+  return drive_with_gyro_advanced(speed, time, pk, correction_speed);
 }
 //Simplified drive_with_gyro_advanced()
-void drive_with_gyro(int speed, int time)
+enum gyroState drive_with_gyro(int speed, int time)
 {
   drive_with_gyro_advanced(speed, time, 12, 0);
 }
 //Abbreviated drive_with_gyro()
-void dwg(int speed, int time)
+enum gyroState dwg(int speed, int time)
 {
   drive_with_gyro(speed, time);
 }
