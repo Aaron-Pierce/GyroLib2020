@@ -649,7 +649,6 @@ enum gyroState drive_until_analog_advanced_compound(int speed, int port1, int po
         mav(left_motor, 0);
         mav(right_motor, 0);
         return TimedOut;
-        break;
       }
     }
   }
@@ -668,7 +667,6 @@ enum gyroState drive_until_analog_advanced_compound(int speed, int port1, int po
         mav(left_motor, 0);
         mav(right_motor, 0);
         return timedOut;
-        break;
       }
     }
   }
@@ -764,7 +762,7 @@ void ccg()
   create_calibrate_gyro();
 }
 //Turns the wheels at given speeds until the desired angle is reached
-void create_arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_theta)
+enum gyroState create_arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_theta)
 {
   //Set up the start time to break if function goes too long
   double start_time = seconds();
@@ -790,7 +788,7 @@ void create_arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double ta
       {
         printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
         create_stop();
-        break;
+        return TimedOut;
       }
     }
   }
@@ -804,23 +802,24 @@ void create_arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double ta
       {
         printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
         create_stop();
-        break;
+        return TimedOut;
       }
     }
   }
   //Stops the create at the end of the turn
   create_stop();
+  return Successful;
 }
 //Abbrevaite create_arc_with_gyro()
-void cawg(int left_wheel_speed, int right_wheel_speed, double target_theta)
+enum gyroState cawg(int left_wheel_speed, int right_wheel_speed, double target_theta)
 {
-  create_arc_with_gyro(left_wheel_speed, right_wheel_speed, target_theta);
+  return create_arc_with_gyro(left_wheel_speed, right_wheel_speed, target_theta);
 }
 //The correction constant is a positive number (usually ~.01) that has to be adjusted based on the robot and turn. The higher it is the faster the robot
 //turns but if it is too high the the robot will jump around and destroy motors but if it is too low then the robot will never reach its target.
 //overshoot is how long in ms you want the robot to continue to turn after it reaches its target to account for overshooting the target.
 //targetTheta needs to be positive for left turns and negative for right turns.
-void create_turn_with_gyro_overshoot(double correctionConstant, double target_theta, double overshoot)
+enum gyroState create_turn_with_gyro_overshoot(double correctionConstant, double target_theta, double overshoot)
 {
   //Set up the start time to break if function goes too long
   double start_time = seconds();
@@ -864,19 +863,20 @@ void create_turn_with_gyro_overshoot(double correctionConstant, double target_th
     {
       printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
       create_stop();
-      break;
+      return TimedOut;
     }
   }
   //Stops the motors at the end of the turn
   create_stop();
+  return Successful;
 }
 //Abbreviated create_turn_with_gyro_overshoot()
-void ctwgo(double correctionConstant, double targetTheta, double overshoot)
+enum gyroState ctwgo(double correctionConstant, double targetTheta, double overshoot)
 {
-  create_turn_with_gyro_overshoot(correctionConstant, targetTheta, overshoot);
+  return create_turn_with_gyro_overshoot(correctionConstant, targetTheta, overshoot);
 }
 //Turns to a angle using PID controls
-void create_turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
+enum gyroState create_turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
   //Converts to kipr degrees
   if (in_degrees)
@@ -921,29 +921,30 @@ void create_turn_with_gyro_advanced(double target_theta, double speed_limit, dou
     {
       printf("Function Timed Out. Error: %f\n", error);
       create_stop();
-      break;
+      return TimedOut;
     }
   }
   //Stops the motors at the end of the turn
   create_stop();
+  return Successful;
 }
 //Abbreviated create_turn_with_gyro_advanced()
-void ctwga(double target_theta, double speed_limit, double pk, double ik, double dk)
+enum gyroState ctwga(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
-  create_turn_with_gyro_advanced(target_theta, speed_limit, pk, ik, dk);
+  return create_turn_with_gyro_advanced(target_theta, speed_limit, pk, ik, dk);
 }
 //Simplified create_turn_with_gyro_advanced()
-void create_turn_with_gyro(double target_theta)
+enum gyroState create_turn_with_gyro(double target_theta)
 {
-  create_turn_with_gyro_advanced(target_theta, 500, 10, 0, 0);
+  return create_turn_with_gyro_advanced(target_theta, 500, 10, 0, 0);
 }
 //Abbreviated create_turn_with_gyro()
-void ctwg(double target_theta)
+enum gyroState ctwg(double target_theta)
 {
-  create_turn_with_gyro(target_theta);
+  return create_turn_with_gyro(target_theta);
 }
 //Drives for a given time at a given speed while trying to maintain starting angle
-void create_drive_with_gyro_advanced(int speed, int time, double pk, int correction)
+enum gyroState create_drive_with_gyro_advanced(int speed, int time, double pk, int correction)
 {
   double target_theta = absolute_theta;
   double start_time = seconds();
@@ -965,19 +966,20 @@ void create_drive_with_gyro_advanced(int speed, int time, double pk, int correct
   }
   //Stop the motors at the end of the drive
   create_stop();
+  return Successful;
 }
 //Abbreviated create_drive_with_gyro_advanced()
-void cdwga(int speed, int time, double pk, double correction_speed)
+enum gyroState cdwga(int speed, int time, double pk, double correction_speed)
 {
-  create_drive_with_gyro_advanced(speed, time, pk, correction_speed);
+  return create_drive_with_gyro_advanced(speed, time, pk, correction_speed);
 }
 //Simplified create_drive_with_gyro_advanced()
-void create_drive_with_gyro(int speed, int time)
+enum gyroState create_drive_with_gyro(int speed, int time)
 {
-  create_drive_with_gyro_advanced(speed, time, 10, 0);
+  return create_drive_with_gyro_advanced(speed, time, 10, 0);
 }
 //Abbreviated create_drive_with_gyro()
-void cdwg(int speed, int time)
+enum gyroState cdwg(int speed, int time)
 {
-  create_drive_with_gyro(speed, time);
+  return create_drive_with_gyro(speed, time);
 }
