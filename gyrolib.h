@@ -580,7 +580,7 @@ enum gyroState dua(int speed, int port, int target_value)
   return drive_until_analog(speed, port, target_value);
 }
 //Drives until a digital input
-void drive_until_digital_advanced(int speed, int port, double pk, double max_time)
+enum gyroState drive_until_digital_advanced(int speed, int port, double pk, double max_time)
 {
   //Set up the initial variables
   double start_time = seconds();
@@ -600,13 +600,31 @@ void drive_until_digital_advanced(int speed, int port, double pk, double max_tim
       printf("Function Timed Out. Error: %f\n", error);
       mav(left_motor, 0);
       mav(right_motor, 0);
-      break;
+      return TimedOut;
     }
   }
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
   mav(left_motor, 0);
+  return Successful;
 }
+
+//Abbreviated drive_until_digital_advanced()
+enum gyroState duda(int speed, int port, double pk, double max_time)
+{
+  return drive_until_digital_advanced(speed, port, pk, max_time);
+}
+//Simplified drive_until_digital_advanced()
+enum gyroState drive_until_digital(int speed, int port)
+{
+  return drive_until_digital_advanced(speed, port, 12, 120000);
+}
+//Abbreviated drive_until_digital()
+enum gyroState dud(int speed, int port)
+{
+  return drive_until_digital(speed, port);
+}
+
 
 int drive_until_analog_advanced_compound(int speed, int port1, int port2, int target_value, double pk, double max_time)
 {
@@ -665,21 +683,7 @@ int duac(int speed, int port1, int port2, int target_value)
   return drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
 }
 
-//Abbreviated drive_until_digital_advanced()
-void duda(int speed, int port, double pk, double max_time)
-{
-  drive_until_digital_advanced(speed, port, pk, max_time);
-}
-//Simplified drive_until_digital_advanced()
-void drive_until_digital(int speed, int port)
-{
-  drive_until_digital_advanced(speed, port, 12, 120000);
-}
-//Abbreviated drive_until_digital()
-void dud(int speed, int port)
-{
-  drive_until_digital(speed, port);
-}
+
 //Drives with gyro a certain distance
 void drive_with_gyro_distance_advanced(int speed, int target_distance, int motor, double pk, int correction)
 {
