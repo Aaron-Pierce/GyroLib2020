@@ -630,6 +630,7 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
               printf("Function Timed Out. Error: %f\n", error);
               mav(left_motor, 0);
               mav(right_motor, 0);
+              return 0;
               break;
           }
       }
@@ -648,6 +649,7 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
               printf("Function Timed Out. Error: %f\n", error);
               mav(left_motor, 0);
               mav(right_motor, 0);
+              return 0;
               break;
           }
       }
@@ -655,10 +657,11 @@ int drive_until_analog_advanced_compound(int speed, int port1, int port2, int ta
   //Stop the motors at the end of the drive
   mav(right_motor, 0);
   mav(left_motor, 0);
+  return 1;
 }
 
-void duac(int speed, int port1, int port2, int target_value){
-    drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
+int duac(int speed, int port1, int port2, int target_value){
+    return drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
 }
 
 
