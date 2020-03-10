@@ -22,6 +22,14 @@ int mode = 0; //The mode with 0 being relative and 1 being absolute
 int timeout = 120000;  //Stops functions after a certain amount of time in milliseconds, defaults to 120 seconds so it does nothing
 char axis = 'z';  //The axis that the program reads from. Defaults to z
 thread thetaTracker;  //Thread to track the absolute theta
+
+
+enum gyroState { //Various return values of Gyro movement functions
+  TimedOut,
+  Successful,
+  Collided,
+};
+
 //initializes the ports for the motors. Sets unit to KIPR degrees
 void declare_motors(int lmotor, int rmotor)
 {
