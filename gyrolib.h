@@ -397,7 +397,7 @@ enum gyroState twgo(double correctionConstant, double targetTheta, double oversh
   return turn_with_gyro_overshoot(correctionConstant, targetTheta, overshoot);
 }
 //Turns to a angle using PID controls
-void turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
+enum gyroState turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
   //Converts to kipr degrees
   if(in_degrees)
@@ -444,27 +444,28 @@ void turn_with_gyro_advanced(double target_theta, double speed_limit, double pk,
           printf("Function Timed Out. Error: %f\n", error);
           mav(left_motor, 0);
           mav(right_motor, 0);
-          break;
+          return TimedOut;
       }
   }
   //Stops the motors at the end of the turn
   mav(left_motor, 0);
   mav(right_motor, 0);
+  return Successful;
 }
 //Abbreviated turn_with_gyro_advanced()
-void twga(double target_theta, double speed_limit, double pk, double ik, double dk)
+enum gyroState twga(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
-  turn_with_gyro_advanced(target_theta, speed_limit, pk, ik, dk);
+  return turn_with_gyro_advanced(target_theta, speed_limit, pk, ik, dk);
 }
 //Simplified turn_with_gyro_advanced()
-void turn_with_gyro(double target_theta)
+enum gyroState turn_with_gyro(double target_theta)
 {
-  turn_with_gyro_advanced(target_theta, 1500, 12, 0, 0);
+  return turn_with_gyro_advanced(target_theta, 1500, 12, 0, 0);
 }
 //Abbreviated turn_with_gyro()
-void twg(double target_theta)
+enum gyroState twg(double target_theta)
 {
-  turn_with_gyro(target_theta);
+  return turn_with_gyro(target_theta);
 }
 //Drives straight forward or backwards. The closer speed is to 0 the faster it will correct itself and the more consistent it will be but just do not go at max speed and it'll be fine.
 //Time is in ms.
