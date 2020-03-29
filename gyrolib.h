@@ -2,8 +2,8 @@
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 |
 | Project: GyroLib_4_0
-| Creators: Reza Torbati, Andrew Zhang, Michael Bartlett
-| Date: Summer 2019
+| Creators: Reza Torbati, Andrew Zhang, Michael Bartlett, Aaron Pierce
+| Date: Spring 2020
 | Description: functions to turn and drive straight using the gyro
 | Contact: Reza Torbati - kofcrotmgiv@gmail.com    Andrew Zhang - infinitepolygons@gmail.com
 |
@@ -11,7 +11,7 @@
 */
 #include <kipr/botball.h>
 #include <pthread.h>
-double bias;  //Variable to hold the calibration value
+double bias;          //Variable to hold the calibration value
 double ninetyDegrees; //How many KIPR degrees are in a regular degrees.
 int right_motor, left_motor;  //ports
 double right_forward_coefficient = 1, left_forward_coefficient = 1; //Used exclusively for drive_with_gyro and create_drive_with_gyro
@@ -95,35 +95,32 @@ void calibrate_degrees()
   in_degrees = 1;
 }
 //Calibrates the bias. Stops the robot for sleep_time. Make sleep_time just large enough so that it at a COMPLETE stop before finding the bias.
-void calibrate_gyro_advanced(int sleep_time, int sample_size)
+void calibrate_gyro_advanced(int calibration_time, int sample_delay)
 {
-  mav(right_motor, 0);
-  mav(left_motor, 0);
-  msleep(sleep_time); //to make sure that everything is actually stopped. The sleep time needs to be just high enough to ensure the robot is at a complete stop
-  //Calculate the how much the gyroscope thinks it moves
-  double initial_time = seconds();
-  double t0 = seconds();
+  ao();
+  //Calculate the average reading of the still gyroscope
+  double start_time = seconds();
   double sum = 0;
   int i = 0;
-  while(i < sample_size)
+  while(seconds() - start_time < calibration_time/1000)
   {
-      sum += get_gyro_reading() * (seconds() - t0);
-      t0 = seconds();
+      sum += get_gyro_reading();
       i++;
+      msleep(sample_delay);
   }
   //Divide how much the gyroscope has drifted by time to get the drift per second
-  bias = (sum / (seconds() - initial_time));
+  bias = sum/i;
   printf("New Bias: %f\n", bias);//prints out your bias. COMMENT THIS LINE OUT IF YOU DON'T WANT BIAS READINGS PRINTED OUT
 }
 //Abbreviated calibrate_gyro_advanced()
-void cga(int sleep_time, int sample_size)
+void cga(int calibration_time, int sample_delay)
 {
-  calibrate_gyro_advanced(sleep_time, sample_size);
+  calibrate_gyro_advanced(calibration_time, sample_delay);
 }
 //Simplified calibrate_gyro_advanced()
 void calibrate_gyro()
 {
-  calibrate_gyro_advanced(0, 5000);
+  calibrate_gyro_advanced(3000, 5);
 }
 //Abbreviated calibrate_gyro()
 void cg()
@@ -597,7 +594,7 @@ void drive_until_digital_advanced(int speed, int port, double pk, double max_tim
   mav(left_motor, 0);
 }
 
-int drive_until_analog_advanced_compound(int speed, int port1, int port2, int target_value, double pk, double max_time)
+void drive_until_analog_advanced_compound(int speed, int port1, int port2, int target_value, double pk, double max_time)
 {
   //Set up the initial variables
   double start_time = seconds();
@@ -963,7 +960,3 @@ void cdwg(int speed, int time)
 {
   create_drive_with_gyro(speed, time);
 }
- 
- 
-
-
