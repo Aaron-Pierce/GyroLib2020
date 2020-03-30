@@ -11,17 +11,16 @@
 */
 #include <kipr/botball.h>
 #include <pthread.h>
-double bias;          //Variable to hold the calibration value
-double ninetyDegrees; //How many KIPR degrees are in a regular degrees.
-int right_motor, left_motor;  //ports
-double right_forward_coefficient = 1, left_forward_coefficient = 1; //Used exclusively for drive_with_gyro and create_drive_with_gyro
-double right_backward_coefficient = 1, left_backward_coefficient = 1; //Because the motors drive differently when going backwards vs when going forwards
-int in_degrees = 0;  //Checks if the user is in regular degrees or KIPR degrees. 0 is KIPR degrees. Would be a boolean if C had those
-double absolute_theta = 0;  //The theta that thetaTracker updates to
-int mode = 0; //The mode with 0 being relative and 1 being absolute
-int timeout = 120000;  //Stops functions after a certain amount of time in milliseconds, defaults to 120 seconds so it does nothing
-char axis = 'z';  //The axis that the program reads from. Defaults to z
-thread thetaTracker;  //Thread to track the absolute theta
+double bias;          													//Variable to hold the calibration value
+double ninetyDegrees; 													//How many KIPR degrees are in a regular degrees.
+int right_motor, left_motor;  											//Motor Ports
+double right_motor_coefficient = 1, left_motor_coefficient = 1; 	//Ratio of power of the wheels to correct for variations in motor power
+int in_degrees = 0;  													//Checks if the user is in regular degrees or KIPR degrees. 0 is KIPR degrees. Would be a boolean if C had those
+double absolute_theta = 0;  											//The theta that thetaTracker updates to
+int mode = 0; 															//The mode with 0 being relative and 1 being absolute
+int timeout = 120000;  													//Stops functions after a certain amount of time in milliseconds, defaults to 120 seconds
+char axis = 'z';  														//The axis that the program reads from. Defaults to z
+thread thetaTracker;  													//Thread to track the absolute theta
 //initializes the ports for the motors. Sets unit to KIPR degrees
 void declare_motors(int lmotor, int rmotor)
 {
@@ -120,7 +119,7 @@ void cga(int calibration_time, int sample_delay)
 //Simplified calibrate_gyro_advanced()
 void calibrate_gyro()
 {
-  calibrate_gyro_advanced(3000, 5);
+  calibrate_gyro_advanced(5000, 5);
 }
 //Abbreviated calibrate_gyro()
 void cg()
@@ -160,7 +159,8 @@ void ig(int lmotor, int rmotor, int degree)
 {
   initialize_gyro(lmotor, rmotor, degree);
 }
-//technically the next 13 functions are not needed in C but you should use them anyway
+
+//Funtions to set and get global variables
 //returns the theta that the theta tracker is getting
 char get_axis()
 {
@@ -215,53 +215,23 @@ double get_bias()
 {
   return bias;
 }
-//the right wheel's drift coefficient when driving forwards
-void set_right_forward_coefficient(double rfc)
+void set_right_motor_coefficient(double rmc)
 {
-  right_forward_coefficient = rfc;
+  right_motor_coefficient = rmc;
 }
-//left coefficient when going forward
-void set_left_forward_coefficient(double lfc)
+void set_left_motor_coefficient(double lmc)
 {
-  left_forward_coefficient = lfc;
+  left_motor_coefficient = lmc;
 }
-//right coefficient when going backwards
-void set_right_backward_coefficient(double rbc)
+double get_right_motor_coefficient()
 {
-  right_backward_coefficient = rbc;
+  return right_motor_coefficient;
 }
-//left coefficient when going backwards
-void set_left_backward_coefficient(double lbc)
+double get_left_motor_coefficient()
 {
-  left_backward_coefficient = lbc;
+  return left_motor_coefficient;
 }
-double get_right_forward_coefficient()
-{
-  return right_forward_coefficient;
-}
-double get_left_forward_coefficient()
-{
-  return left_forward_coefficient;
-}
-double get_right_backward_coefficient()
-{
-  return right_backward_coefficient;
-}
-double get_left_backward_coefficient()
-{
-  return left_backward_coefficient;
-}
-//use the next two functions to more easily set both forward and backward coefficients if they are the same
-void set_right_coefficient(double rc)
-{
-  right_forward_coefficient = rc;
-  right_backward_coefficient = rc;
-}
-void set_left_coefficient(double lc)
-{
-  left_forward_coefficient = lc;
-  left_backward_coefficient = lc;
-}
+
 //turns the robot to reach a desired theta. Make sure that your robot is turing in the correct direction or it will never stop. If you are expecting this function to work consistantly then don't take your turns too fast.
 //This is considerably worse than the new turn_with_gyro for pivot turns but is more consistent from robot to robot and allows the robot to arc.
 void arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_theta)
@@ -279,8 +249,8 @@ void arc_with_gyro(int left_wheel_speed, int right_wheel_speed, double target_th
       target_theta += absolute_theta;
   }
   //Sets the motor speeds
-  mav(right_motor, right_wheel_speed);
-  mav(left_motor, left_wheel_speed);
+  mav(right_motor, right_wheel_speed * right_motor_coefficient);
+  mav(left_motor, left_wheel_speed * left_motor_coefficient);
   if(target_theta > absolute_theta)//positive turns left
   {
       //Keeps the motors going until it reaches the desired angle
@@ -421,8 +391,8 @@ void turn_with_gyro_advanced(double target_theta, double speed_limit, double pk,
           pid = -max_speed;
       }
       //Move the robot
-      mav(right_motor, pid);
-      mav(left_motor, -pid);
+      mav(right_motor, pid  * right_motor_coefficient);
+      mav(left_motor, -pid  * left_motor_coefficient);
       //Update theta and error
       error = target_theta - absolute_theta;
       //Break out of the loop if timeout is exceeded
@@ -464,8 +434,8 @@ void drive_with_gyro_advanced(int speed, int time, double pk, int correction)
   double error = absolute_theta - target_theta;
   while(seconds() - start_time < (time / 1000.0))
   {
-      mav(right_motor, speed - (pk * error));
-      mav(left_motor, speed + (pk * error));
+      mav(right_motor, (speed * right_motor_coefficient) - (pk * error));
+      mav(left_motor, (speed * left_motor_coefficient) + (pk * error));
       error = absolute_theta - target_theta;
   }
   //Turn at the end to be certain that it ends at the same angle it started at if correction does not equal 0
@@ -511,8 +481,8 @@ int drive_until_analog_advanced(int speed, int port, int target_value, double pk
   {
       while(analog(port) < target_value)
       {
-          mav(right_motor, speed - (pk * error));
-          mav(left_motor, speed + (pk * error));
+          mav(right_motor, (speed * right_motor_coefficient) - (pk * error));
+          mav(left_motor, (speed * left_motor_coefficient) + (pk * error));
           error = absolute_theta - target_theta;
           //Break out of the loop if timeout is exceeded
           if((seconds() - start_time) * 1000 > max_time)
@@ -553,8 +523,6 @@ int duaa(int speed, int port, int target_value, double pk, double max_time)
 {
   return drive_until_analog_advanced(speed, port, target_value, pk, max_time);
 }
-
-
 //Simplified drive_until_analog_advanced()
 int drive_until_analog(int speed, int port, int target_value)
 {
@@ -564,34 +532,6 @@ int drive_until_analog(int speed, int port, int target_value)
 int dua(int speed, int port, int target_value)
 {
   return drive_until_analog(speed, port, target_value);
-}
-//Drives until a digital input
-void drive_until_digital_advanced(int speed, int port, double pk, double max_time)
-{
-  //Set up the initial variables
-  double start_time = seconds();
-  double target_theta = absolute_theta;
-  double error = absolute_theta - target_theta;
-  //Check the initial value
-  int initial_value = digital(port);
-  //Drive until the value in the digital sensor changes
-  while(digital(port) == initial_value)
-  {
-      mav(right_motor, speed - (pk * error));
-      mav(left_motor, speed + (pk * error));
-      error = absolute_theta - target_theta;
-      //Break out of the loop if timeout is exceeded
-      if((seconds() - start_time) * 1000 > max_time)
-      {
-          printf("Function Timed Out. Error: %f\n", error);
-          mav(left_motor, 0);
-          mav(right_motor, 0);
-          break;
-      }
-  }
-  //Stop the motors at the end of the drive
-  mav(right_motor, 0);
-  mav(left_motor, 0);
 }
 
 void drive_until_analog_advanced_compound(int speed, int port1, int port2, int target_value, double pk, double max_time)
@@ -607,8 +547,8 @@ void drive_until_analog_advanced_compound(int speed, int port1, int port2, int t
   {
       while(analog(port1) + analog(port2) < target_value)
       {
-          mav(right_motor, speed - (pk * error));
-          mav(left_motor, speed + (pk * error));
+          mav(right_motor, (speed * right_motor_coefficient) - (pk * error));
+          mav(left_motor, (speed * left_motor_coefficient) + (pk * error));
           error = absolute_theta - target_theta;
           //Break out of the loop if timeout is exceeded
           if((seconds() - start_time) * 1000 > max_time)
@@ -625,8 +565,8 @@ void drive_until_analog_advanced_compound(int speed, int port1, int port2, int t
   {
       while(analog(port1) + analog(port2) > target_value)
       {
-          mav(right_motor, speed - (pk * error));
-          mav(left_motor, speed + (pk * error));
+          mav(right_motor, (speed * right_motor_coefficient) - (pk * error));
+          mav(left_motor, (speed * left_motor_coefficient) + (pk * error));
           error = absolute_theta - target_theta;
           //Break out of the loop if timeout is exceeded
           if((seconds() - start_time) * 1000 > max_time)
@@ -642,13 +582,40 @@ void drive_until_analog_advanced_compound(int speed, int port1, int port2, int t
   mav(right_motor, 0);
   mav(left_motor, 0);
 }
-
-void duac(int speed, int port1, int port2, int target_value){
+//Abbreviated and simplified drive_until_analog_compound_advanced()
+void duac(int speed, int port1, int port2, int target_value)
+{
     drive_until_analog_advanced_compound(speed, port1, port2, target_value, 12, 120000);
 }
 
-
-
+//Drives until a digital input
+void drive_until_digital_advanced(int speed, int port, double pk, double max_time)
+{
+  //Set up the initial variables
+  double start_time = seconds();
+  double target_theta = absolute_theta;
+  double error = absolute_theta - target_theta;
+  //Check the initial value
+  int initial_value = digital(port);
+  //Drive until the value in the digital sensor changes
+  while(digital(port) == initial_value)
+  {
+      mav(right_motor, (speed * right_motor_coefficient) - (pk * error));
+      mav(left_motor, (speed * left_motor_coefficient) + (pk * error));
+      error = absolute_theta - target_theta;
+      //Break out of the loop if timeout is exceeded
+      if((seconds() - start_time) * 1000 > max_time)
+      {
+          printf("Function Timed Out. Error: %f\n", error);
+          mav(left_motor, 0);
+          mav(right_motor, 0);
+          break;
+      }
+  }
+  //Stop the motors at the end of the drive
+  mav(right_motor, 0);
+  mav(left_motor, 0);
+}
 //Abbreviated drive_until_digital_advanced()
 void duda(int speed, int port, double pk, double max_time)
 {
@@ -673,8 +640,8 @@ void drive_with_gyro_distance_advanced(int speed, int target_distance, int motor
   //Drive until the desired distance is reached
   while(abs(gmpc(motor) - initial_distance) < target_distance)
   {
-      mav(right_motor, speed - (pk * error));
-      mav(left_motor, speed + (pk * error));
+      mav(right_motor, (speed * right_motor_coefficient) - (pk * error));
+      mav(left_motor, (speed * left_motor_coefficient) + (pk * error));
       error = absolute_theta - target_theta;
   }
   //Turn at the end to be certain that it ends at the same angle it started at if correction does not equal 0
@@ -706,6 +673,43 @@ void dwgd(int speed, int target_distance, int motor)
 {
   drive_with_gyro_distance(speed, target_distance, motor);
 }
+
+//Finds the ratio between the motor speeds to allow for straighter driving
+void calibrate_ticks_advanced(int speed, int time)
+{
+    int l_start_pos = gmpc(left_motor);
+    int r_start_pos = gmpc(right_motor);
+    dwg(speed, time);
+    int l_dist = gmpc(left_motor) - l_start_pos;
+    int r_dist = gmpc(right_motor) - r_start_pos;
+    //If left wheel went further
+    if(l_dist > r_dist)
+    {
+        printf("Right Motor Coefficient: %f", (double)r_dist/l_dist);   
+        right_motor_coefficient = (double)r_dist/l_dist;
+    }
+    else
+    {
+        printf("Left Motor Coefficient: %f", (double)l_dist/r_dist);
+        left_motor_coefficient = (double)l_dist/r_dist;
+    }
+}
+//Abbreviated calibrate_ticks_advanced()
+void cta(int speed, int time)
+{
+    calibrate_ticks_advanced(speed, time);
+}
+//Simplified calibrate_ticks_advanced
+void calibrate_ticks()
+{
+ 	calibrate_ticks_advanced(1000, 5000);   
+}
+//Abbreviated calibrate_ticks()
+void ct()
+{
+ 	calibrate_ticks();   
+}
+
 //CREATE EXCLUSIVE FUNCTIONS BELOW
 //Stops the create and calibrates. Exact same as calibrarte_gyro_advanced and should only be used if the create was previously moving and you are too lazy to stop it yourself
 void create_calibrate_gyro_advanced(int sleep_time, int sample_size)
