@@ -11,16 +11,18 @@
 */
 #include <kipr/botball.h>
 #include <pthread.h>
-double bias;          													//Variable to hold the calibration value
-double ninetyDegrees; 													//How many KIPR degrees are in a regular degrees.
-int right_motor, left_motor;  											//Motor Ports
-double right_motor_coefficient = 1, left_motor_coefficient = 1; 	//Ratio of power of the wheels to correct for variations in motor power
-int in_degrees = 0;  													//Checks if the user is in regular degrees or KIPR degrees. 0 is KIPR degrees. Would be a boolean if C had those
-double absolute_theta = 0;  											//The theta that thetaTracker updates to
-int mode = 0; 															//The mode with 0 being relative and 1 being absolute
-int timeout = 120000;  													//Stops functions after a certain amount of time in milliseconds, defaults to 120 seconds
-char axis = 'z';  														//The axis that the program reads from. Defaults to z
-thread thetaTracker;  													//Thread to track the absolute theta
+double bias;                                                          //Variable to hold the calibration value
+double ninetyDegrees;                                                 //How many KIPR degrees are in a regular degrees.
+int right_motor, left_motor;                                          //ports
+double right_motor_coefficient = 1, left_motor_coefficient = 1;       //Used exclusively for drive_with_gyro and create_drive_with_gyro
+int in_degrees = 0;                                                   //Checks if the user is in regular degrees or KIPR degrees. 0 is KIPR degrees. Would be a boolean if C had those
+double absolute_theta = 0;                                            //The theta that thetaTracker updates to
+int mode = 0;                                                         //The mode with 0 being relative and 1 being absolute
+int timeout = 120000;                                                 //Stops functions after a certain amount of time in milliseconds, defaults to 120 seconds so it does nothing
+char axis = 'z';                                                      //The axis that the program reads from. Defaults to z
+thread thetaTracker;                                                  //Thread to track the absolute theta
+
+
 //initializes the ports for the motors. Sets unit to KIPR degrees
 void declare_motors(int lmotor, int rmotor)
 {
@@ -377,9 +379,14 @@ void turn_with_gyro_advanced(double target_theta, double speed_limit, double pk,
   {
       //Update the P, I, and D Values
       p = error;
-      i += error * (seconds() - t0);
+      //Anti-windup code for integral
+      if(abs(p*pk) < max_speed)
+      {
+      	i += error * (seconds() - t0);
+      }
       d = (error - previous_error) / (seconds() - t0);
       t0 = seconds();
+      previous_error = error;
       pid = p*pk + i*ik + d*dk;
       //Cap the pid value to the motor limitations
       if(pid > max_speed)
@@ -882,9 +889,14 @@ void create_turn_with_gyro_advanced(double target_theta, double speed_limit, dou
   {
       //Update the P, I, and D Values
       p = error;
-      i += error * (seconds() - t0);
+      //Anti-windup code for integral
+      if(abs(p*pk) < max_speed)
+      {
+      	i += error * (seconds() - t0);
+      }
       d = (error - previous_error) / (seconds() - t0);
       t0 = seconds();
+      previous_error = error;
       pid = p*pk + i*ik + d*dk;
       //Cap the pid value to the motor limitations
       if(pid > max_speed)
@@ -918,7 +930,7 @@ void ctwga(double target_theta, double speed_limit, double pk, double ik, double
 //Simplified create_turn_with_gyro_advanced()
 void create_turn_with_gyro(double target_theta)
 {
-  create_turn_with_gyro_advanced(target_theta, 500, 10, 0, 0);
+  create_turn_with_gyro_advanced(target_theta, 500, 2, 0, 0);
 }
 //Abbreviated create_turn_with_gyro()
 void ctwg(double target_theta)
@@ -957,7 +969,7 @@ void cdwga(int speed, int time, double pk, double correction_speed)
 //Simplified create_drive_with_gyro_advanced()
 void create_drive_with_gyro(int speed, int time)
 {
-  create_drive_with_gyro_advanced(speed, time, 10, 0);
+  create_drive_with_gyro_advanced(speed, time, 2, 0);
 }
 //Abbreviated create_drive_with_gyro()
 void cdwg(int speed, int time)
