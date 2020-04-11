@@ -755,65 +755,7 @@ void cawg(int left_wheel_speed, int right_wheel_speed, double target_theta)
 {
   create_arc_with_gyro(left_wheel_speed, right_wheel_speed, target_theta);
 }
-//The correction constant is a positive number (usually ~.01) that has to be adjusted based on the robot and turn. The higher it is the faster the robot
-//turns but if it is too high the the robot will jump around and destroy motors but if it is too low then the robot will never reach its target.
-//overshoot is how long in ms you want the robot to continue to turn after it reaches its target to account for overshooting the target.
-//targetTheta needs to be positive for left turns and negative for right turns.
-void create_turn_with_gyro_overshoot(double correctionConstant, double target_theta, double overshoot)
-{
-  //Set up the start time to break if function goes too long
-  double start_time = seconds();
-  //Converts to kipr degrees
-  if(in_degrees)
-  {
-      target_theta *= (ninetyDegrees / 90);
-  }
-  //Change between absolute and relative theta
-  if(mode == 0)
-  {
-      target_theta += absolute_theta;
-  }
-  //Converts from milliseconds to seconds
-  overshoot /= 1000;
-  //Boolean checks if it has overshot yet
-  int overshot = 0;
-  double overshotTime = 0;
-  while(seconds() < overshotTime + overshoot || overshot == 0)
-  {
-      if(target_theta >= absolute_theta)
-      {
-          create_drive_direct(-(target_theta - absolute_theta) * correctionConstant, (target_theta - absolute_theta) * correctionConstant);
-          if(absolute_theta >= target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
-      }
-      else
-      {
-          create_drive_direct((absolute_theta - target_theta) * correctionConstant, -(absolute_theta - target_theta) * correctionConstant);
-          if(absolute_theta < target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
-      }
-      //Stop the function if the overshoot time is exceeded
-      if((seconds() - start_time) * 1000 > timeout)
-      {
-          printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-          create_stop();
-          break;
-      }
-  }
-  //Stops the motors at the end of the turn
-  create_stop();
-}
-//Abbreviated create_turn_with_gyro_overshoot()
-void ctwgo(double correctionConstant, double targetTheta, double overshoot)
-{
-  create_turn_with_gyro_overshoot(correctionConstant, targetTheta, overshoot);
-}
+
 //Turns to a angle using PID controls
 void create_turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
