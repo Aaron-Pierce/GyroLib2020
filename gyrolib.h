@@ -292,69 +292,7 @@ void awg(int lspeed, int rspeed, double target_theta)
 {
   arc_with_gyro(lspeed, rspeed, target_theta);
 }
-//The correction constant is a positive number (usually ~.01) that has to be adjusted based on the robot and turn. The higher it is the faster the robot
-//turns but if it is too high the the robot will jump around and destroy motors but if it is too low then the robot will never reach its target.
-//overshoot is how long in ms you want the robot to continue to turn after it reaches its target to account for overshooting the target.
-//targetTheta needs to be positive for left turns and negative for right turns.
-void turn_with_gyro_overshoot(double correctionConstant, double target_theta, double overshoot)
-{
-  //Set up the start time to break if function goes too long
-  double start_time = seconds();
-  //Converts to kipr degrees
-  if(in_degrees)
-  {
-      target_theta *= (ninetyDegrees / 90);
-  }
-  //Change between absolute and relative theta
-  if(mode == 0)
-  {
-      target_theta += absolute_theta;
-  }
-  //Converts from milliseconds to seconds
-  overshoot /= 1000;
-  //Boolean checks if it has overshot yet
-  int overshot = 0;
-  double overshotTime = 0;
-  while(seconds() < overshotTime + overshoot || overshot == 0)
-  {
-      if(target_theta >= absolute_theta)
-      {
-          mav(left_motor, -(target_theta - absolute_theta) * correctionConstant);
-          mav(right_motor,(target_theta - absolute_theta) * correctionConstant);
-          if(absolute_theta >= target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
-      }
-      else
-      {
-          mav(left_motor, (absolute_theta - target_theta) * correctionConstant);
-          mav(right_motor, -(absolute_theta - target_theta) * correctionConstant);
-          if(absolute_theta < target_theta && !overshot)
-          {
-              overshot = 1;
-              overshotTime = seconds();
-          }
-      }
-      //Stop the function if the overshoot time is exceeded
-      if((seconds() - start_time) * 1000 > timeout)
-      {
-          printf("Function Timed out. Error: %f\n", target_theta - absolute_theta);
-          mav(left_motor, 0);
-          mav(right_motor, 0);
-          break;
-      }
-  }
-  //Stops the motors at the end of the turn
-  mav(left_motor, 0);
-  mav(right_motor, 0);
-}
-//Abbreviated turn_with_gyro_overshoot()
-void twgo(double correctionConstant, double targetTheta, double overshoot)
-{
-  turn_with_gyro_overshoot(correctionConstant, targetTheta, overshoot);
-}
+
 //Turns to a angle using PID controls
 void turn_with_gyro_advanced(double target_theta, double speed_limit, double pk, double ik, double dk)
 {
@@ -423,27 +361,38 @@ void twga(double target_theta, double speed_limit, double pk, double ik, double 
 //Simplified turn_with_gyro_advanced()
 void turn_with_gyro(double target_theta)
 {
-  turn_with_gyro_advanced(target_theta, 1500, 12, 0, 0);
+  turn_with_gyro_advanced(target_theta, 1500, 10, 4, 0);
 }
 //Abbreviated turn_with_gyro()
 void twg(double target_theta)
 {
   turn_with_gyro(target_theta);
 }
+
 //Drives straight forward or backwards. The closer speed is to 0 the faster it will correct itself and the more consistent it will be but just do not go at max speed and it'll be fine.
 //Time is in ms.
 //Correction speed is the speed that the robot corrects itself at the end. The robot will not correct at the end if the speed is <= 0
 //If correction speed is between 0 and 1 then will run turn_with_gyro instead of arc_with_gyro to correct
-void drive_with_gyro_advanced(int speed, int time, double pk, int correction)
+void drive_with_gyro_advanced(int speed, int time, double pk, double ik, double dk, int correction)
 {
   double target_theta = absolute_theta;
   double start_time = seconds();
-  double error = absolute_theta - target_theta;
+  double t0 = seconds();
+  double error = target_theta - absolute_theta;
+  double p, i, d, pid;
+  int previous_error = error;
   while(seconds() - start_time < (time / 1000.0))
   {
-      mav(right_motor, (speed * right_motor_coefficient) - (pk * error));
-      mav(left_motor, (speed * left_motor_coefficient) + (pk * error));
-      error = absolute_theta - target_theta;
+      //Update the P, I, and D Values
+      p = error;
+      i += error * (seconds() - t0);
+      d = (error - previous_error) / (seconds() - t0);
+      t0 = seconds();
+      previous_error = error;
+      pid = p*pk + i*ik + d*dk;
+      mav(right_motor, (speed * right_motor_coefficient) + pid);
+      mav(left_motor, (speed * left_motor_coefficient) - pid);
+      error = target_theta - absolute_theta;
   }
   //Turn at the end to be certain that it ends at the same angle it started at if correction does not equal 0
   //Change between absolute and relative theta
@@ -460,14 +409,14 @@ void drive_with_gyro_advanced(int speed, int time, double pk, int correction)
   mav(left_motor, 0);
 }
 //Abbreviated drive_with_gyro_advanced()
-void dwga(int speed, int time, double pk, double correction_speed)
+void dwga(int speed, int time, double pk, double ik, double dk, double correction_speed)
 {
-  drive_with_gyro_advanced(speed, time, pk, correction_speed);
+  drive_with_gyro_advanced(speed, time, pk, ik, dk, correction_speed);
 }
 //Simplified drive_with_gyro_advanced()
 void drive_with_gyro(int speed, int time)
 {
-  drive_with_gyro_advanced(speed, time, 12, 0);
+  drive_with_gyro_advanced(speed, time, 12, 10, 0, 0);
 }
 //Abbreviated drive_with_gyro()
 void dwg(int speed, int time)
@@ -938,15 +887,25 @@ void ctwg(double target_theta)
   create_turn_with_gyro(target_theta);
 }
 //Drives for a given time at a given speed while trying to maintain starting angle
-void create_drive_with_gyro_advanced(int speed, int time, double pk, int correction)
+void create_drive_with_gyro_advanced(int speed, int time, double pk, double ik, double dk, int correction)
 {
   double target_theta = absolute_theta;
   double start_time = seconds();
-  double error = absolute_theta - target_theta;
+  double t0 = seconds();
+  double error = target_theta - absolute_theta;
+  double p, i, d, pid;
+  int previous_error = error;
   while(seconds() - start_time < (time / 1000.0))
   {
-      create_drive_direct(speed + (pk * error), speed - (pk * error));
-      error = absolute_theta - target_theta;
+      //Update the P, I, and D Values
+      p = error;
+      i += error * (seconds() - t0);
+      d = (error - previous_error) / (seconds() - t0);
+      t0 = seconds();
+      previous_error = error;
+      pid = p*pk + i*ik + d*dk;
+      create_drive_direct((speed * left_motor_coefficient) - pid, (speed * right_motor_coefficient) - pid);
+      error = target_theta - absolute_theta;
   }
   //Turn at the end to be certain that it ends at the same angle it started at if correction does not equal 0
   //Change between absolute and relative theta
@@ -962,14 +921,14 @@ void create_drive_with_gyro_advanced(int speed, int time, double pk, int correct
   create_stop();
 }
 //Abbreviated create_drive_with_gyro_advanced()
-void cdwga(int speed, int time, double pk, double correction_speed)
+void cdwga(int speed, int time, double pk, double ik, double dk, double correction_speed)
 {
-  create_drive_with_gyro_advanced(speed, time, pk, correction_speed);
+  create_drive_with_gyro_advanced(speed, time, pk, ik, dk, correction_speed);
 }
 //Simplified create_drive_with_gyro_advanced()
 void create_drive_with_gyro(int speed, int time)
 {
-  create_drive_with_gyro_advanced(speed, time, 2, 0);
+  create_drive_with_gyro_advanced(speed, time, 2, 0, 0, 0);
 }
 //Abbreviated create_drive_with_gyro()
 void cdwg(int speed, int time)
