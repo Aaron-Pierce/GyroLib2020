@@ -1,7 +1,8 @@
 #include <kipr/botball.h>
-double quat1[4] = {0, 1, 1, 1};
-double quat2[4] = {1, 0, 0, 0};
+int gyro_readings[3] = {0, 0, 0};
+double gyro_offset[3] = {0, 0, 0};
 double orientation_quaternion[4] = {1, 0.0001, 0.0001, 0.0001};
+double dt = 0;
 
 //Multiply two quaternions and return the address of an array containing the product
 double * multiply_quaternions(double q1[4], double q2[4] ) 
@@ -72,6 +73,29 @@ double * normalize_quaternion(double q[4])
     return norm_quat;
 }
 
+void calibrate_gyro()
+{
+    double x_sum = 0;
+    double y_sum = 0;
+    double z_sum = 0;
+    int i = 0;
+    double start_time = seconds();
+    
+    //Add up readings for 5 seconds
+    while(seconds() - start_time < 5)
+    {
+        x_sum += gyro_x();
+        y_sum += gyro_y();
+        z_sum += gyro_z();
+        i++;
+        msleep(10);
+    }
+    
+    //Take the average of the readings
+    gyro_offset[0] = x_sum / i;
+    gyro_offset[1] = y_sum / i;
+    gyro_offset[2] = z_sum / i;
+}
 /* main function to call above defined function */
 int main () {
 
