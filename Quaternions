@@ -1,0 +1,88 @@
+#include <kipr/botball.h>
+double quat1[4] = {0, 1, 1, 1};
+double quat2[4] = {1, 0, 0, 0};
+double orientation_quaternion[4] = {1, 0.0001, 0.0001, 0.0001};
+
+//Multiply two quaternions and return the address of an array containing the product
+double * multiply_quaternions(double q1[4], double q2[4] ) 
+{
+    //Define a location to hold the product
+    static double product[4];
+
+    //Distribute the terms
+    product[0] = q1[0]*q2[0] - q1[1]*q2[1] - q1[2]*q2[2] - q1[3]*q2[3];	//Real
+    product[1] = q1[0]*q2[1] + q1[1]*q2[0] + q1[2]*q2[3] - q1[3]*q2[2];	//i
+    product[2] = q1[0]*q2[2] - q1[1]*q2[3] + q1[2]*q2[0] + q1[3]*q2[1];	//j
+    product[3] = q1[0]*q2[3] + q1[1]*q2[2] - q1[2]*q2[1] + q1[3]*q2[0];	//k
+	
+    //Return the answer as a pointer
+    return product;
+}
+
+//Convert an angular velocity vector into a rotation quaternion
+double * angular_rate_to_quaternion_rotation(double gyro_data[3], double delta_time)
+{
+    //Define a location to hold the rotation quaternion
+ 	static double rotation_quaternion[4];
+    
+    //Find the magnitude of the gyro data vector
+    double gyro_norm = pow(pow(gyro_data[0],2) + pow(gyro_data[1],2) + pow(gyro_data[2],2),0.5);
+    
+    //Store the norm * delta_time over two because the quaternion rotation doubles the angle
+    double sine_angle = sin(delta_time * gyro_norm / 2);
+    
+    rotation_quaternion[0] = cos(delta_time * gyro_norm / 2);
+    rotation_quaternion[1] = sine_angle * gyro_data[0] / gyro_norm;
+    rotation_quaternion[2] = sine_angle * gyro_data[1] / gyro_norm;
+    rotation_quaternion[3] = sine_angle * gyro_data[2] / gyro_norm;
+    
+    //Return the quaternion as a pointer
+    return rotation_quaternion;
+}
+
+//Find the conjugate of a quaternion 
+double * conjugate_quaternion(double q[4])
+{
+ 	//Define a location to hold the conjugate 
+    static double conjugate[4];
+    
+    conjugate[0] = q[0];
+    conjugate[1] = -q[1];
+    conjugate[2] = -q[2];
+    conjugate[3] = -q[3];
+    
+    //Return the conjugate as a pointer
+    return conjugate;
+}
+
+//Normalize a quaternion
+double * normalize_quaternion(double q[4])
+{
+ 	//Define a location to hold the normalized quaternion
+    static double norm_quat[4];
+    
+    //Find the norm, then divide each term by it
+    double norm = pow(pow(q[0],2) + pow(q[1],2) + pow(q[2],2) + pow(q[3],2), 0.5);
+    norm_quat[0] = q[0] / norm;
+    norm_quat[1] = q[1] / norm;
+    norm_quat[2] = q[2] / norm;
+    norm_quat[3] = q[3] / norm;
+    
+    //Return the normalized quaternion as a pointer
+    return norm_quat;
+}
+
+/* main function to call above defined function */
+int main () {
+
+    /* a pointer to a double */
+    double *p;
+    int i;
+	
+    p = normalize_quaternion(orientation_quaternion);
+
+    for ( i = 0; i < 4; i++ ) {
+        printf( "*(p + %d) : %f\n", i, *(p + i));
+    }
+    return 0;
+}
